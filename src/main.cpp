@@ -1,26 +1,55 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <Adafruit_PN532.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 
+// LCD stuff
+#define LCD_ADDRESS 0x27
+
+#define LCD_COLUMNS 20
+#define LCD_ROWS 4
+
+LiquidCrystal_I2C lcd(LCD_ADDRESS, LCD_COLUMNS, LCD_ROWS);
+
+//SPI (RFID reader) stuff
 #define SS_PIN   5 // Set the SPI SS PIN
 #define SCK_PIN  18
 #define MOSI_PIN 23
 #define MISO_PIN 19
 #define RST_PIN  25 // Set the PN532 RST PIN
 
-#define BUZZER_PIN 26 // Define the pin number for the buzzer
-
 Adafruit_PN532 nfc(SCK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
+
+//Buzzer
+#define BUZZER_PIN 26 // Define the pin number for the buzzer
+void lcdHeading(){
+  lcd.setCursor(0, 0);
+  lcd.print("  ESP Smart planter  ");
+}
 
 void setup(void) {
   Serial.begin(9600);
   Serial.println("Hello!");
+
+  // Initialize the I2C communication
+  Wire.begin(); // SDA pin 21, SCL pin 22
+
+  // Initialize the LCD
+  lcd.init();
+  // Turn on the lcd backlight
+  lcd.backlight();
+
+  lcdHeading();
+
 
   nfc.begin();
 
   uint32_t versiondata = nfc.getFirmwareVersion();
   if (!versiondata) {
     Serial.print("Didn't find PN53x board");
+    lcd.setCursor(0, 3);
+    lcd.print("Didn't find PN53x!");
     while (1); // Halt
   }
 
@@ -29,9 +58,23 @@ void setup(void) {
   Serial.print("Firmware ver. "); Serial.print((versiondata >> 16) & 0xFF, DEC);
   Serial.print('.'); Serial.println((versiondata >> 8) & 0xFF, DEC);
 
+  lcd.setCursor(0, 3);
+  lcd.print("Found RFID reader!");
+  delay(250);
+
   // Configure board to read RFID tags
   nfc.SAMConfig();
   Serial.println("Waiting for an RFID card...");
+  lcd.clear();
+
+  lcdHeading();
+  lcd.setCursor(0, 3);
+  lcd.print("Found RFID reader!");
+
+  delay(250);
+
+  lcd.clear();
+  lcdHeading();
 }
 
 void loop(void) {
@@ -44,8 +87,14 @@ void loop(void) {
 
   if (success) {
     Serial.println("Found an RFID card!");
+    lcd.clear();
+    lcdHeading();
+    lcd.setCursor(0, 1);
+    lcd.print("Found an RFID card!");
 
-    Serial.print("UID Length: ");Serial.print(uidLength, DEC);Serial.println(" bytes");
+    Serial.print("UID Length: ");
+    Serial.print(uidLength, DEC);
+    Serial.println(" bytes");
     Serial.print("UID Value: ");
     for (uint8_t i = 0; i < uidLength; i++) {
       Serial.print(" 0x");Serial.print(uid[i], HEX);
@@ -58,7 +107,11 @@ void loop(void) {
 
     // Compare the UID of the card with authorized UIDs
     if (memcmp(uid, authorizedUID1, uidLength) == 0 || memcmp(uid, authorizedUID2, uidLength) == 0) {
-      Serial.println("Authorized access");
+      Serial.println("Tomatoes");
+      lcd.clear();
+      lcdHeading();
+      lcd.setCursor(0, 1);
+      lcd.print("Tomatoes");
       tone(BUZZER_PIN, 950);
       delay(75);
       noTone(BUZZER_PIN);
@@ -66,8 +119,15 @@ void loop(void) {
       tone(BUZZER_PIN, 1150);
       delay(75);
       noTone(BUZZER_PIN);
+      delay(300);
+      lcd.clear();
+      lcdHeading();
     } else {
-      Serial.println("Access denied");
+      Serial.println("Error");
+      lcd.clear();
+      lcdHeading();
+      lcd.setCursor(0, 1);
+      lcd.print("Error, unrecognised.");
       tone(BUZZER_PIN, 600);
       delay(60);
       noTone(BUZZER_PIN);
@@ -79,6 +139,9 @@ void loop(void) {
       tone(BUZZER_PIN, 500);
       delay(60);
       noTone(BUZZER_PIN);
+      delay(240);
+      lcd.clear();
+      lcdHeading();
     }
 
     delay(1000);
