@@ -7,6 +7,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
+#include <FastLED.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <freertos/FreeRTOS.h>
@@ -50,12 +51,22 @@ Adafruit_PN532 nfc(SCK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
 
 Adafruit_BME280 bme;
 
+// LDR
+#define LDR_PIN 34 // Define the pin connected to the LDR
+
+// LED strip
+#define LED_PIN 13
+#define NUM_LEDS 10
+
+CRGB leds[NUM_LEDS];
+
 // Variables to store current target, etc.
 String currentTarget = "none";
 
 // Function prototypes
 void rfidTask(void *parameter);
 void lcdHeading();
+void ldrCheck();
 
 void setup() {
   Serial.begin(9600);
@@ -117,6 +128,8 @@ void setup() {
 
   delay(500);
 
+  FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS); // Activate LEDs
+
   lcd.clear();
   lcdHeading();
 
@@ -134,6 +147,8 @@ void setup() {
 
 void loop() {
   unsigned long currentTime = millis(); // Get the current time in milliseconds
+
+  ldrCheck();
 
   // Get soil temperatures
   sensors.requestTemperatures();
@@ -186,6 +201,19 @@ void buzzerDeny() {
   delay(60);
   noTone(BUZZER_PIN);
   delay(240);
+}
+
+void ldrCheck() {
+  int ldrValue = analogRead(LDR_PIN); // Read the analog value from the LDR
+  Serial.print("LDR Value: ");
+  Serial.println(ldrValue); // Print the value to the serial monitor
+  if (int(ldrValue) < 1600) {
+    fill_solid(leds, NUM_LEDS, CRGB(255, 200, 230)); // color
+  FastLED.show();
+  } else {
+    fill_solid(leds, NUM_LEDS, CRGB(90, 20, 30)); // dark
+  FastLED.show();
+  }
 }
 
 void rfidTask(void *parameter) {
