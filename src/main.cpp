@@ -65,18 +65,32 @@ CRGB leds[NUM_LEDS];
 #define RELAY_CH2 14
 #define RELAY_CH3 27
 
+#define RELAY_POWER 35
+
 // Variables to store current target, etc.
 String currentTarget = "none";
 
+int ldrValue;
+
+#define LDR_TRIGGER 1600
+
+float temperature;
+
+bool fanStatus = false;
+
 // Function prototypes
 void rfidTask(void *parameter);
+void lcdTask(void *parameter);
 void lcdHeading();
 void ldrCheck();
+void relayLogic();
 
 void setup() {
   pinMode(RELAY_CH1, OUTPUT);
   pinMode(RELAY_CH2, OUTPUT);
   pinMode(RELAY_CH3, OUTPUT);
+  pinMode(RELAY_POWER, OUTPUT);
+  digitalWrite(RELAY_POWER, LOW); // Disable power for relay at startup to prevent issues
 
   Serial.begin(9600);
   Serial.println("Hello!");
@@ -152,11 +166,25 @@ void setup() {
     NULL,              // Task handle
     0                  // Core to run the task on (0 or 1)
   );
+
+  xTaskCreatePinnedToCore(
+    lcdTask,          // Task function
+    "RFID Task",       // Task name
+    10000,             // Stack size (words)
+    NULL,              // Task parameter
+    2,                 // Priority
+    NULL,              // Task handle
+    1                 // Core to run the task on (0 or 1)
+  );
+
+  delay(100);
+  digitalWrite(RELAY_POWER, HIGH);
 }
 
 void loop() {
-  digitalWrite(RELAY_CH1, HIGH);
   unsigned long currentTime = millis(); // Get the current time in milliseconds
+
+  relayLogic();
 
   ldrCheck();
 
@@ -169,19 +197,42 @@ void loop() {
   Serial.print(temperatureC);
   Serial.println(" °C");
 
-  float temperature = bme.readTemperature();
+  temperature = bme.readTemperature();
   Serial.print("Air temperature: ");
   Serial.print(temperature);
   Serial.println(" °C");
 
-  delay(500);
-  digitalWrite(RELAY_CH1, LOW);
-  delay(500);
+  delay(2500);
 
   // Main loop code goes here
   // ...
 
   // Delay or other logic
+}
+
+void relayLogic() {
+  if(currentTarget == "Strawberries" & temperature > 23){
+    digitalWrite(RELAY_CH1, LOW);
+    fanStatus = true;
+  } else if(currentTarget == "Strawberries" & temperature <= 21){
+    digitalWrite(RELAY_CH1, HIGH);
+    fanStatus = false;
+  } else if(currentTarget == "Tomatoes" & temperature > 28){
+    digitalWrite(RELAY_CH1, LOW);
+    fanStatus = true;
+  } else if(currentTarget == "Tomatoes" & temperature <= 24){
+    digitalWrite(RELAY_CH1, HIGH);
+    fanStatus = false;
+  } else if(currentTarget == "Cabbage" & temperature > 21){
+    digitalWrite(RELAY_CH1, LOW);
+    fanStatus = true;
+  } else if(currentTarget == "Cabbage" & temperature <= 18){
+    digitalWrite(RELAY_CH1, HIGH);
+    fanStatus = false;
+  } else {
+    digitalWrite(RELAY_CH1, HIGH);
+    fanStatus = false;
+  }
 }
 
 void lcdHeading() {
@@ -216,16 +267,66 @@ void buzzerDeny() {
 }
 
 void ldrCheck() {
-  int ldrValue = analogRead(LDR_PIN); // Read the analog value from the LDR
+  ldrValue = analogRead(LDR_PIN); // Read the analog value from the LDR
   Serial.print("LDR Value: ");
   Serial.println(ldrValue); // Print the value to the serial monitor
-  if (int(ldrValue) < 1600) {
+  if (int(ldrValue) < LDR_TRIGGER) {
     fill_solid(leds, NUM_LEDS, CRGB(255, 200, 230)); // color
   FastLED.show();
   } else {
     fill_solid(leds, NUM_LEDS, CRGB(90, 20, 30)); // dark
   FastLED.show();
   }
+}
+
+void lcdTask(void *parameter) {
+  while(1){
+  lcd.clear();
+  lcdHeading();
+  lcd.setCursor(0, 1);
+  lcd.print("Current air temp:");
+  lcd.setCursor(0, 2);
+  lcd.print(String(temperature) + " *C");
+
+  delay(2500);
+
+  lcd.clear();
+  lcdHeading();
+  lcd.setCursor(0, 1);
+  lcd.print("Current target:");
+  lcd.setCursor(0, 2);
+  lcd.print(String(currentTarget));
+
+  delay(2500);
+
+  lcd.clear();
+  lcdHeading();
+  lcd.setCursor(0, 1);
+  lcd.print("Current light level:");
+  lcd.setCursor(0, 2);
+  if(ldrValue > LDR_TRIGGER){
+    lcd.print("Daytime");
+  } else if(ldrValue <= LDR_TRIGGER){
+    lcd.print("Nighttime");
+  }
+
+  delay(2500);
+
+  lcd.clear();
+  lcdHeading();
+  lcd.setCursor(0, 1);
+  lcd.print("Fan status:");
+  lcd.setCursor(0, 2);
+  if(fanStatus == true){
+    lcd.print("Running");
+  } else if(fanStatus == false){
+    lcd.print("Off");
+  }
+
+  delay(2500);
+  
+  }
+  vTaskDelay(2500 / portTICK_PERIOD_MS); // Delay for 2500ms before checking again
 }
 
 void rfidTask(void *parameter) {
@@ -278,8 +379,9 @@ void rfidTask(void *parameter) {
 
         delay(1000);
 
-        lcd.clear();
-        lcdHeading();
+        noTone(BUZZER_PIN);
+        digitalWrite(BUZZER_PIN, LOW);
+
       } else if (memcmp(uid, cabbageUID, uidLength) == 0) {
         Serial.println("Cabbage");
         lcd.clear();
@@ -296,8 +398,9 @@ void rfidTask(void *parameter) {
 
         delay(1000);
 
-        lcd.clear();
-        lcdHeading();
+        noTone(BUZZER_PIN);
+        digitalWrite(BUZZER_PIN, LOW);
+
       } else if (memcmp(uid, StrawberriesUID, uidLength) == 0) {
         Serial.println("Strawberries");
         lcd.clear();
@@ -314,8 +417,9 @@ void rfidTask(void *parameter) {
 
         delay(1000);
 
-        lcd.clear();
-        lcdHeading();
+        noTone(BUZZER_PIN);
+        digitalWrite(BUZZER_PIN, LOW);
+
       } else if (memcmp(uid, showCurrentTarget, uidLength) == 0) {
         Serial.println("Cabbage");
         lcd.clear();
@@ -329,8 +433,9 @@ void rfidTask(void *parameter) {
 
         delay(1000);
 
-        lcd.clear();
-        lcdHeading();
+        noTone(BUZZER_PIN);
+        digitalWrite(BUZZER_PIN, LOW);
+        
       } else {
         Serial.println("Error");
         lcd.clear();
@@ -343,8 +448,9 @@ void rfidTask(void *parameter) {
 
         delay(1000);
 
-        lcd.clear();
-        lcdHeading();
+        noTone(BUZZER_PIN);
+        digitalWrite(BUZZER_PIN, LOW);
+
       }
     }
     vTaskDelay(100 / portTICK_PERIOD_MS); // Delay for 100ms before checking again
