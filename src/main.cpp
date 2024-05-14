@@ -60,6 +60,11 @@ Adafruit_BME280 bme;
 
 CRGB leds[NUM_LEDS];
 
+// Relay stuff
+#define RELAY_CH1 12
+#define RELAY_CH2 14
+#define RELAY_CH3 27
+
 // Variables to store current target, etc.
 String currentTarget = "none";
 
@@ -69,6 +74,10 @@ void lcdHeading();
 void ldrCheck();
 
 void setup() {
+  pinMode(RELAY_CH1, OUTPUT);
+  pinMode(RELAY_CH2, OUTPUT);
+  pinMode(RELAY_CH3, OUTPUT);
+
   Serial.begin(9600);
   Serial.println("Hello!");
 
@@ -146,6 +155,7 @@ void setup() {
 }
 
 void loop() {
+  digitalWrite(RELAY_CH1, HIGH);
   unsigned long currentTime = millis(); // Get the current time in milliseconds
 
   ldrCheck();
@@ -164,6 +174,8 @@ void loop() {
   Serial.print(temperature);
   Serial.println(" °C");
 
+  delay(500);
+  digitalWrite(RELAY_CH1, LOW);
   delay(500);
 
   // Main loop code goes here
