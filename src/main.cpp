@@ -56,7 +56,7 @@ Adafruit_BME280 bme;
 
 // LED strip
 #define LED_PIN 13
-#define NUM_LEDS 10
+#define NUM_LEDS 20
 
 CRGB leds[NUM_LEDS];
 
@@ -72,7 +72,7 @@ String currentTarget = "none";
 
 int ldrValue;
 
-#define LDR_TRIGGER 1600
+#define LDR_TRIGGER 2500
 
 float temperature;
 
@@ -358,9 +358,9 @@ void rfidTask(void *parameter) {
       // Define the authorized UIDs
       uint8_t showCurrentTarget[] = {0x13, 0x27, 0x13, 0x19};
 
-      uint8_t tomatoesUID[] = {0xF3, 0x47, 0xD, 0x19};
+      uint8_t tomatoesUID[] = {0x3, 0xD4, 0xA, 0x19};
       uint8_t cabbageUID[] = {0xA3, 0xD4, 0x14, 0x19};
-      uint8_t StrawberriesUID[] = {0x43, 0x7A, 0xF, 0x19};
+      uint8_t StrawberriesUID[] = {0xD3, 0xA8, 0xA5, 0x18};
 
       // Compare the UID of the card with authorized UIDs
       if (memcmp(uid, tomatoesUID, uidLength) == 0) {
