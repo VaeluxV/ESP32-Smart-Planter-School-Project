@@ -76,6 +76,8 @@ int ldrValue;
 
 float temperature;
 
+float soilTempC;
+
 bool fanStatus = false;
 
 // Function prototypes
@@ -190,11 +192,11 @@ void loop() {
 
   // Get soil temperatures
   sensors.requestTemperatures();
-  float temperatureC = sensors.getTempCByIndex(0);
+  soilTempC = sensors.getTempCByIndex(0);
 
   // Debug print temperatures
   Serial.print("Soil temperature: ");
-  Serial.print(temperatureC);
+  Serial.print(soilTempC);
   Serial.println(" °C");
 
   temperature = bme.readTemperature();
@@ -281,49 +283,58 @@ void ldrCheck() {
 
 void lcdTask(void *parameter) {
   while(1){
-  lcd.clear();
-  lcdHeading();
-  lcd.setCursor(0, 1);
-  lcd.print("Current air temp:");
-  lcd.setCursor(0, 2);
-  lcd.print(String(temperature) + " *C");
+    lcd.clear();
+    lcdHeading();
+    lcd.setCursor(0, 1);
+    lcd.print("Current air temp:");
+    lcd.setCursor(0, 2);
+    lcd.print(String(temperature) + " *C");
 
-  delay(2500);
+    delay(2500);
 
-  lcd.clear();
-  lcdHeading();
-  lcd.setCursor(0, 1);
-  lcd.print("Current target:");
-  lcd.setCursor(0, 2);
-  lcd.print(String(currentTarget));
+    lcd.clear();
+    lcdHeading();
+    lcd.setCursor(0, 1);
+    lcd.print("Current soil temp:");
+    lcd.setCursor(0, 2);
+    lcd.print(String(soilTempC) + " *C");
 
-  delay(2500);
+    delay(2500);
 
-  lcd.clear();
-  lcdHeading();
-  lcd.setCursor(0, 1);
-  lcd.print("Current light level:");
-  lcd.setCursor(0, 2);
-  if(ldrValue > LDR_TRIGGER){
-    lcd.print("Daytime");
-  } else if(ldrValue <= LDR_TRIGGER){
-    lcd.print("Nighttime");
-  }
+    lcd.clear();
+    lcdHeading();
+    lcd.setCursor(0, 1);
+    lcd.print("Current target:");
+    lcd.setCursor(0, 2);
+    lcd.print(String(currentTarget));
 
-  delay(2500);
+    delay(2500);
 
-  lcd.clear();
-  lcdHeading();
-  lcd.setCursor(0, 1);
-  lcd.print("Fan status:");
-  lcd.setCursor(0, 2);
-  if(fanStatus == true){
-    lcd.print("Running");
-  } else if(fanStatus == false){
-    lcd.print("Off");
-  }
+    lcd.clear();
+    lcdHeading();
+    lcd.setCursor(0, 1);
+    lcd.print("Current light level:");
+    lcd.setCursor(0, 2);
+    if(ldrValue > LDR_TRIGGER){
+      lcd.print("Daytime");
+    } else if(ldrValue <= LDR_TRIGGER){
+      lcd.print("Nighttime");
+    }
 
-  delay(2500);
+    delay(2500);
+
+    lcd.clear();
+    lcdHeading();
+    lcd.setCursor(0, 1);
+    lcd.print("Fan status:");
+    lcd.setCursor(0, 2);
+    if(fanStatus == true){
+      lcd.print("Running");
+    } else if(fanStatus == false){
+      lcd.print("Off");
+    }
+
+    delay(2500);
   
   }
   vTaskDelay(2500 / portTICK_PERIOD_MS); // Delay for 2500ms before checking again
