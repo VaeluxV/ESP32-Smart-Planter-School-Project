@@ -10,8 +10,28 @@
 #include <FastLED.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <WiFi.h>
+#include <PubSubClient.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+
+// MQTT settings
+#define mqtt_server "nebulabit.local"
+#define mqtt_port 1883
+#define mqtt_username "test"
+#define mqtt_password "test"
+
+// MQTT topics
+#define TOPIC_TEMP "planter/temperature"
+#define TOPIC_SOIL_TEMP "planter/soil_temperature"
+#define TOPIC_LDR "planter/ldr"
+#define TOPIC_FAN_STATUS "planter/fan_status"
+#define TOPIC_TARGET "planter/target"
+#define TOPIC_SOIL_HUMIDITY "planter/soil_humidity"
+
+// WiFi settings
+#define WIFI_SSID "SSID"
+#define WIFI_PASSWORD "PASSWORD"
 
 // OneWire bus (soil temperature sensor)
 #define ONE_WIRE_BUS 33
@@ -56,7 +76,7 @@ Adafruit_BME280 bme;
 
 // LED strip
 #define LED_PIN 13
-#define NUM_LEDS 10
+#define NUM_LEDS 100
 
 CRGB leds[NUM_LEDS];
 
@@ -67,12 +87,15 @@ CRGB leds[NUM_LEDS];
 
 #define RELAY_POWER 35
 
+// Soil humidity sensor
+#define SOIL_HUMIDITY_PIN 32
+
 // Variables to store current target, etc.
 String currentTarget = "none";
 
 int ldrValue;
 
-#define LDR_TRIGGER 1600
+#define LDR_TRIGGER 600
 
 float temperature;
 
@@ -80,12 +103,21 @@ float soilTempC;
 
 bool fanStatus = false;
 
+int soilHumidity;
+
+// Create an instance of the WiFi and MQTT client
+WiFiClient espClient;
+PubSubClient client(espClient);
+
 // Function prototypes
 void rfidTask(void *parameter);
 void lcdTask(void *parameter);
 void lcdHeading();
 void ldrCheck();
 void relayLogic();
+void setup_wifi();
+void reconnect();
+void sendMQTTData();
 
 void setup() {
   pinMode(RELAY_CH1, OUTPUT);
@@ -153,6 +185,9 @@ void setup() {
 
   delay(500);
 
+  setup_wifi();
+  client.setServer(mqtt_server, mqtt_port);
+
   FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS); // Activate LEDs
 
   lcd.clear();
@@ -184,6 +219,13 @@ void setup() {
 }
 
 void loop() {
+  if (!client.connected()) {
+    reconnect();
+  }
+  
+  client.loop();
+
+
   unsigned long currentTime = millis(); // Get the current time in milliseconds
 
   relayLogic();
@@ -193,24 +235,69 @@ void loop() {
   // Get soil temperatures
   sensors.requestTemperatures();
   soilTempC = sensors.getTempCByIndex(0);
+  temperature = bme.readTemperature();
+  soilHumidity = analogRead(SOIL_HUMIDITY_PIN);
 
   // Debug print temperatures
   Serial.print("Soil temperature: ");
   Serial.print(soilTempC);
   Serial.println(" °C");
 
-  temperature = bme.readTemperature();
   Serial.print("Air temperature: ");
   Serial.print(temperature);
   Serial.println(" °C");
 
+  Serial.print("Soil humidity: ");
+  Serial.println(soilHumidity);
+
+  sendMQTTData();
+
   delay(2500);
 
-  // Main loop code goes here
-  // ...
-
-  // Delay or other logic
 }
+
+void setup_wifi() {
+  delay(10);
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(WIFI_SSID);
+
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void reconnect() {
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    if (client.connect("ESP32Client", mqtt_username, mqtt_password)) {
+      Serial.println("connected");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      delay(5000);
+    }
+  }
+}
+
+void sendMQTTData() {
+  client.publish(TOPIC_TEMP, String(temperature).c_str());
+  client.publish(TOPIC_SOIL_TEMP, String(soilTempC).c_str());
+  client.publish(TOPIC_LDR, String(ldrValue).c_str());
+  client.publish(TOPIC_FAN_STATUS, fanStatus ? "Running" : "Off");
+  client.publish(TOPIC_TARGET, currentTarget.c_str());
+  client.publish(TOPIC_SOIL_HUMIDITY, String(soilHumidity).c_str());
+}
+
 
 void relayLogic() {
   if(currentTarget == "Strawberries" & temperature > 23){
@@ -272,11 +359,11 @@ void ldrCheck() {
   ldrValue = analogRead(LDR_PIN); // Read the analog value from the LDR
   Serial.print("LDR Value: ");
   Serial.println(ldrValue); // Print the value to the serial monitor
-  if (int(ldrValue) < LDR_TRIGGER) {
-    fill_solid(leds, NUM_LEDS, CRGB(255, 200, 230)); // color
+  if (int(ldrValue) < LDR_TRIGGER - 50) {
+    fill_solid(leds, NUM_LEDS, CRGB(100, 10, 255)); // color
   FastLED.show();
-  } else {
-    fill_solid(leds, NUM_LEDS, CRGB(90, 20, 30)); // dark
+  } else if (int(ldrValue) > LDR_TRIGGER + 50) {
+    fill_solid(leds, NUM_LEDS, CRGB(10, 1, 20)); // dark
   FastLED.show();
   }
 }
@@ -368,6 +455,7 @@ void rfidTask(void *parameter) {
 
       // Define the authorized UIDs
       uint8_t showCurrentTarget[] = {0x13, 0x27, 0x13, 0x19};
+      uint8_t resetTarget[] = {0x53, 0x2D, 0x1A, 0x19};
 
       uint8_t tomatoesUID[] = {0xF3, 0x47, 0xD, 0x19};
       uint8_t cabbageUID[] = {0xA3, 0xD4, 0x14, 0x19};
@@ -432,13 +520,30 @@ void rfidTask(void *parameter) {
         digitalWrite(BUZZER_PIN, LOW);
 
       } else if (memcmp(uid, showCurrentTarget, uidLength) == 0) {
-        Serial.println("Cabbage");
+        Serial.println("showing target on lcd");
         lcd.clear();
         lcdHeading();
         lcd.setCursor(0, 1);
         lcd.print("Current target:");
         lcd.setCursor(0, 2);
         lcd.print(String(currentTarget));
+
+        buzzerAccept();
+
+        delay(1000);
+
+        noTone(BUZZER_PIN);
+        digitalWrite(BUZZER_PIN, LOW);
+        
+      } else if (memcmp(uid, resetTarget, uidLength) == 0) {
+        Serial.println("reset target");
+        lcd.clear();
+        lcdHeading();
+
+        lcd.setCursor(0, 1);
+        lcd.print("Target reset.");
+
+        currentTarget = "none";
 
         buzzerAccept();
 
