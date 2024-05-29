@@ -1,6 +1,5 @@
 /* --- Libraries --- */
 #include <Arduino.h>
-#include <Arduino.h>
 #include <SPI.h>
 #include <Adafruit_PN532.h>
 #include <Wire.h>
@@ -30,8 +29,8 @@
 #define TOPIC_SOIL_HUMIDITY "planter/soil_humidity"
 
 // WiFi settings
-#define WIFI_SSID "SSID"
-#define WIFI_PASSWORD "PASSWORD"
+#define WIFI_SSID "embed"
+#define WIFI_PASSWORD "weareincontrol"
 
 // OneWire bus (soil temperature sensor)
 #define ONE_WIRE_BUS 33
@@ -252,7 +251,7 @@ void loop() {
 
   sendMQTTData();
 
-  delay(2500);
+  delay(5000);
 
 }
 
@@ -454,11 +453,11 @@ void rfidTask(void *parameter) {
       Serial.println("");
 
       // Define the authorized UIDs
-      uint8_t showCurrentTarget[] = {0x13, 0x27, 0x13, 0x19};
-      uint8_t resetTarget[] = {0x53, 0x2D, 0x1A, 0x19};
+      uint8_t showCurrentTarget[] = {0x93, 0xC6, 0x9, 0x19};
+      uint8_t resetTarget[] = {0x93, 0x2B, 0x19, 0x19};
 
-      uint8_t tomatoesUID[] = {0xF3, 0x47, 0xD, 0x19};
-      uint8_t cabbageUID[] = {0xA3, 0xD4, 0x14, 0x19};
+      uint8_t tomatoesUID[] = {0xA3, 0x6, 0x18, 0x19};
+      uint8_t cabbageUID[] = {0xD3, 0x4B, 0x26, 0x19};
       uint8_t StrawberriesUID[] = {0x43, 0x7A, 0xF, 0x19};
 
       // Compare the UID of the card with authorized UIDs
