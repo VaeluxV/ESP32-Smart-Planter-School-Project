@@ -13,3 +13,5 @@
 * Wire
 ### Optional hardware:
 * Custom PCB
+
+Check the `/documentation/Documentation_ESP_Smart_planter.docx` for the most up-to-date documentation!
