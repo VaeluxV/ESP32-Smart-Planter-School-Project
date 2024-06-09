@@ -29,8 +29,8 @@
 #define TOPIC_SOIL_HUMIDITY "planter/soil_humidity"
 
 // WiFi settings
-#define WIFI_SSID "embed"
-#define WIFI_PASSWORD "weareincontrol"
+#define WIFI_SSID "SSID"
+#define WIFI_PASSWORD "PASS"
 
 // OneWire bus (soil temperature sensor)
 #define ONE_WIRE_BUS 33
@@ -84,10 +84,12 @@ CRGB leds[NUM_LEDS];
 #define RELAY_CH2 14
 #define RELAY_CH3 27
 
-#define RELAY_POWER 35
+#define RELAY_POWER 15
 
 // Soil humidity sensor
 #define SOIL_HUMIDITY_PIN 32
+
+#define WATER_LEVEL_PIN 35
 
 // Variables to store current target, etc.
 String currentTarget = "none";
@@ -102,7 +104,9 @@ float soilTempC;
 
 bool fanStatus = false;
 
-int soilHumidity;
+float soilHumidity;
+
+float waterLevel;
 
 // Create an instance of the WiFi and MQTT client
 WiFiClient espClient;
@@ -123,6 +127,13 @@ void setup() {
   pinMode(RELAY_CH2, OUTPUT);
   pinMode(RELAY_CH3, OUTPUT);
   pinMode(RELAY_POWER, OUTPUT);
+
+  pinMode(SOIL_HUMIDITY_PIN, INPUT);
+  pinMode(WATER_LEVEL_PIN, INPUT);
+
+  digitalWrite(RELAY_CH1, HIGH);
+  digitalWrite(RELAY_CH2, HIGH);
+  digitalWrite(RELAY_CH3, HIGH);
   digitalWrite(RELAY_POWER, LOW); // Disable power for relay at startup to prevent issues
 
   Serial.begin(9600);
@@ -221,7 +232,9 @@ void loop() {
   if (!client.connected()) {
     reconnect();
   }
-  
+
+  digitalWrite(RELAY_POWER, HIGH);
+
   client.loop();
 
 
@@ -235,7 +248,8 @@ void loop() {
   sensors.requestTemperatures();
   soilTempC = sensors.getTempCByIndex(0);
   temperature = bme.readTemperature();
-  soilHumidity = analogRead(SOIL_HUMIDITY_PIN);
+  soilHumidity = map(analogRead(SOIL_HUMIDITY_PIN), 0, 4095, 100, 0);
+  waterLevel = analogRead(WATER_LEVEL_PIN);
 
   // Debug print temperatures
   Serial.print("Soil temperature: ");
@@ -248,6 +262,9 @@ void loop() {
 
   Serial.print("Soil humidity: ");
   Serial.println(soilHumidity);
+
+  Serial.print("Water level: ");
+  Serial.println(waterLevel);
 
   sendMQTTData();
 
@@ -453,11 +470,13 @@ void rfidTask(void *parameter) {
       Serial.println("");
 
       // Define the authorized UIDs
-      uint8_t showCurrentTarget[] = {0x93, 0xC6, 0x9, 0x19};
-      uint8_t resetTarget[] = {0x93, 0x2B, 0x19, 0x19};
+      uint8_t showCurrentTarget[] = {0x53, 0x2D, 0x1A, 0x19};
+      uint8_t resetTarget[] = {0xD3, 0x1E, 0x1C, 0x19};
 
-      uint8_t tomatoesUID[] = {0xA3, 0x6, 0x18, 0x19};
-      uint8_t cabbageUID[] = {0xD3, 0x4B, 0x26, 0x19};
+      uint8_t runPump[] = {0x93, 0xEC, 0x11, 0x19};
+
+      uint8_t tomatoesUID[] = {0x13, 0x27, 0x13, 0x19};
+      uint8_t cabbageUID[] = {0xF3, 0x47, 0xD, 0x19};
       uint8_t StrawberriesUID[] = {0x43, 0x7A, 0xF, 0x19};
 
       // Compare the UID of the card with authorized UIDs
@@ -547,6 +566,20 @@ void rfidTask(void *parameter) {
         buzzerAccept();
 
         delay(1000);
+
+        noTone(BUZZER_PIN);
+        digitalWrite(BUZZER_PIN, LOW);
+        
+      } else if (memcmp(uid, runPump, uidLength) == 0) {
+        Serial.println("running pump.");
+
+        digitalWrite(RELAY_CH2, LOW);
+
+        buzzerAccept();
+
+        delay(5000);
+
+        digitalWrite(RELAY_CH2, HIGH);
 
         noTone(BUZZER_PIN);
         digitalWrite(BUZZER_PIN, LOW);
