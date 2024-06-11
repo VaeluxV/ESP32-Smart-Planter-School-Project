@@ -25,8 +25,10 @@
 #define TOPIC_SOIL_TEMP "planter/soil_temperature"
 #define TOPIC_LDR "planter/ldr"
 #define TOPIC_FAN_STATUS "planter/fan_status"
+#define TOPIC_PUMP_STATUS "planter/pump_status"
 #define TOPIC_TARGET "planter/target"
 #define TOPIC_SOIL_HUMIDITY "planter/soil_humidity"
+#define TOPIC_RESERVOIR_LEVEL "planter/reservoir_level"
 
 // WiFi settings
 #define WIFI_SSID "SSID"
@@ -248,7 +250,7 @@ void loop() {
   sensors.requestTemperatures();
   soilTempC = sensors.getTempCByIndex(0);
   temperature = bme.readTemperature();
-  soilHumidity = map(analogRead(SOIL_HUMIDITY_PIN), 0, 4095, 100, 0);
+  soilHumidity = map(analogRead(SOIL_HUMIDITY_PIN), 0, 4095, 0, 100);
   waterLevel = analogRead(WATER_LEVEL_PIN);
 
   // Debug print temperatures
@@ -309,7 +311,17 @@ void sendMQTTData() {
   client.publish(TOPIC_TEMP, String(temperature).c_str());
   client.publish(TOPIC_SOIL_TEMP, String(soilTempC).c_str());
   client.publish(TOPIC_LDR, String(ldrValue).c_str());
-  client.publish(TOPIC_FAN_STATUS, fanStatus ? "Running" : "Off");
+  client.publish(TOPIC_RESERVOIR_LEVEL, String(map(waterLevel, 0, 4095, 0, 100)).c_str());
+  if (fanStatus) {
+    client.publish(TOPIC_FAN_STATUS, String("1").c_str());
+  } else if (!fanStatus) {
+    client.publish(TOPIC_FAN_STATUS, String("0").c_str());
+  }
+  if (digitalRead(RELAY_CH2)) {
+    client.publish(TOPIC_PUMP_STATUS, String("1").c_str());
+  } else if (!digitalRead(RELAY_CH2)) {
+    client.publish(TOPIC_PUMP_STATUS, String("0").c_str());
+  }
   client.publish(TOPIC_TARGET, currentTarget.c_str());
   client.publish(TOPIC_SOIL_HUMIDITY, String(soilHumidity).c_str());
 }
