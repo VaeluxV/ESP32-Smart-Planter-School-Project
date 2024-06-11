@@ -18,7 +18,8 @@
 ## Software info
 
 ### Required software:
-* Arduino IDE or VS Code (Platformio) (originally developed for Platformio)
+* Arduino IDE or VS Code (Platformio) (originally developed for/using Platformio)
+
 ### Required libraries:
 * SPI
 * Adafruit_PN532
@@ -33,6 +34,9 @@
 * PubSubClient
 * freertos/FreeRTOS
 * freertos/task
+
+### The code:
+You can find the code for the ESP32 under [`/src/main.cpp`](https://github.com/VaeluxV/ESP32-Smart-Planter-School-Project/blob/main/src/main.cpp)
 
 ---
 
