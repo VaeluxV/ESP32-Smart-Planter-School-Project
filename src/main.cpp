@@ -98,8 +98,10 @@ String currentTarget = "none";
 
 int ldrValue;
 
+// Tell the lights when to turn on or off, if they turn off or on at unexpected times, try to tweak this value until it works for you.
 #define LDR_TRIGGER 600
 
+// Variables for temperature and other things that have to be stored globally
 float temperature;
 
 float soilTempC;
@@ -126,6 +128,7 @@ void reconnect();
 void sendMQTTData();
 
 void setup() {
+  // set all the pins to the correct modes
   pinMode(RELAY_CH1, OUTPUT);
   pinMode(RELAY_CH2, OUTPUT);
   pinMode(RELAY_CH3, OUTPUT);
@@ -134,11 +137,13 @@ void setup() {
   pinMode(SOIL_HUMIDITY_PIN, INPUT);
   pinMode(WATER_LEVEL_PIN, INPUT);
 
+  //disable the relay channels by default
   digitalWrite(RELAY_CH1, HIGH);
   digitalWrite(RELAY_CH2, HIGH);
   digitalWrite(RELAY_CH3, HIGH);
   digitalWrite(RELAY_POWER, LOW); // Disable power for relay at startup to prevent issues
 
+  // start serial communication
   Serial.begin(9600);
   Serial.println("Hello!");
 
@@ -158,6 +163,7 @@ void setup() {
   // Initialize the RFID reader
   nfc.begin();
 
+  // print RFID reader info on serial console and show if there is one present or not on the LCD & serial monitor
   uint32_t versiondata = nfc.getFirmwareVersion();
   if (!versiondata) {
     Serial.print("Didn't find PN53x board");
@@ -166,7 +172,7 @@ void setup() {
     while (1); // Halt
   }
 
-  // Got good data, printing it. (firmware version & chip type)
+  // Got good data, print it. (firmware version & chip type)
   Serial.print("Found chip PN5"); Serial.println((versiondata >> 24) & 0xFF, HEX);
   Serial.print("Firmware ver. "); Serial.print((versiondata >> 16) & 0xFF, DEC);
   Serial.print('.'); Serial.println((versiondata >> 8) & 0xFF, DEC);
@@ -186,6 +192,7 @@ void setup() {
 
   delay(500);
 
+  // check if the BME280 sensor is present, if not wait and try again until one is found
   while (!bme.begin(BME280_ADDRESS)) {
     Serial.println("Could not find a valid BME280 sensor, check wiring!");
     lcd.setCursor(0, 3);
@@ -198,6 +205,7 @@ void setup() {
 
   delay(500);
 
+  // start wifi conection
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
 
@@ -228,15 +236,15 @@ void setup() {
   );
 
   delay(100);
+  // enable relay again
   digitalWrite(RELAY_POWER, HIGH);
 }
 
 void loop() {
+  // handle disconnects
   if (!client.connected()) {
     reconnect();
   }
-
-  digitalWrite(RELAY_POWER, HIGH);
 
   client.loop();
 
@@ -269,7 +277,7 @@ void loop() {
   Serial.print("Water level: ");
   Serial.println(waterLevel);
 
-  sendMQTTData();
+  sendMQTTData(); // send teh data over MQTT
 
   delay(5000);
 
