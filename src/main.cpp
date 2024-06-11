@@ -31,8 +31,8 @@
 #define TOPIC_RESERVOIR_LEVEL "planter/reservoir_level"
 
 // WiFi settings
-#define WIFI_SSID "Mordor"
-#define WIFI_PASSWORD "RoterWein2013!"
+#define WIFI_SSID "SSID"
+#define WIFI_PASSWORD "PASS"
 
 // OneWire bus (soil temperature sensor)
 #define ONE_WIRE_BUS 33
