@@ -31,8 +31,8 @@
 #define TOPIC_RESERVOIR_LEVEL "planter/reservoir_level"
 
 // WiFi settings
-#define WIFI_SSID "SSID"
-#define WIFI_PASSWORD "PASS"
+#define WIFI_SSID "Mordor"
+#define WIFI_PASSWORD "RoterWein2013!"
 
 // OneWire bus (soil temperature sensor)
 #define ONE_WIRE_BUS 33
@@ -251,7 +251,7 @@ void loop() {
   sensors.requestTemperatures();
   soilTempC = sensors.getTempCByIndex(0);
   temperature = bme.readTemperature();
-  soilHumidity = map(analogRead(SOIL_HUMIDITY_PIN), 0, 4095, 0, 100);
+  soilHumidity = map(analogRead(SOIL_HUMIDITY_PIN), 0, 4095, 100, 0);
   waterLevel = analogRead(WATER_LEVEL_PIN);
 
   // Debug print temperatures
