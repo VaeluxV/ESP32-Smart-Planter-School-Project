@@ -18,7 +18,7 @@
 ## Software info
 
 ### Required software:
-* Arduino IDE or VS Code (Platformio)
+* Arduino IDE or VS Code (Platformio) (originally developed for Platformio)
 ### Required libraries:
 * SPI
 * Adafruit_PN532
@@ -41,6 +41,11 @@
 This project works using Grafana, InfluxDB & MQTT installed on any device such as a Raspberry Pi. You can remove the Grafana & InfluxDB if you do not need to store any data but it is not recommended because I have not tested the full functionality without these programs. MQTT is required if you do not modify any code.
 
 Make sure to enter your WiFi and MQTT details when uploading this code to your ESP32 or it won't work!
+
+MQTT settings can be found at line 18-21 and WiFi settings can be found at line 32-33.
+Other configurable settings can also be found near the top of the code. This can be used if your LCD has a different I2C adress (line 44) for example.
+
+The InfluxDB connection requires a database names `planter_readings` to be present so make sure to make that before starting the MQTT bridge!
 
 Connections schematic (default config):
 ![Image of the schematic](https://github.com/VaeluxV/ESP32-Smart-Planter-School-Project/blob/c1af1cb7f98856f32b2263611ea02691f5bdc3e4/images/SchematicSmartPlanter.jpg)

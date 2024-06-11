@@ -30,14 +30,16 @@ def save_to_influxdb(topic, payload):
         print(f"Decoded payload: {payload_str}")
 
         # Determine the data type and process accordingly
-        if topic in ['planter/temperature', 'planter/soil_temperature', 'planter/ldr', 'planter/soil_humidity']:
+        if topic in ['planter/temperature', 'planter/soil_temperature', 'planter/ldr', 'planter/soil_humidity', 'planter/reservoir_level']:
             value = float(payload_str)
-        elif topic in ['planter/fan_status', 'planter/target']:
-            value = payload_str
+        elif topic in ['planter/fan_status', 'planter/pump_status']:
+            value = int(payload_str)
+        elif topic in ['planter/target']:
+            value = str(payload_str)
         else:
             print(f"Unknown topic: {topic}")
             return
-        
+
         # Construct the data to be written to InfluxDB
         data = [
             {
