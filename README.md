@@ -18,7 +18,7 @@
 ## Software info
 
 ### Required software:
-* Arduino IDE or VS Code (Platformio)
+* Arduino IDE or VS Code (Platformio) (originally developed for Platformio)
 ### Required libraries:
 * SPI
 * Adafruit_PN532
