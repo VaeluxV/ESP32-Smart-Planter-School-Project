@@ -105,6 +105,7 @@ float temperature;
 float soilTempC;
 
 bool fanStatus = false;
+bool pumpStatus = false;
 
 float soilHumidity;
 
@@ -317,9 +318,9 @@ void sendMQTTData() {
   } else if (!fanStatus) {
     client.publish(TOPIC_FAN_STATUS, String("0").c_str());
   }
-  if (digitalRead(RELAY_CH2)) {
+  if (pumpStatus) {
     client.publish(TOPIC_PUMP_STATUS, String("1").c_str());
-  } else if (!digitalRead(RELAY_CH2)) {
+  } else if (!pumpStatus) {
     client.publish(TOPIC_PUMP_STATUS, String("0").c_str());
   }
   client.publish(TOPIC_TARGET, currentTarget.c_str());
@@ -586,12 +587,14 @@ void rfidTask(void *parameter) {
         Serial.println("running pump.");
 
         digitalWrite(RELAY_CH2, LOW);
+        pumpStatus = true;
 
         buzzerAccept();
 
         delay(5000);
 
         digitalWrite(RELAY_CH2, HIGH);
+        pumpStatus = false;
 
         noTone(BUZZER_PIN);
         digitalWrite(BUZZER_PIN, LOW);
