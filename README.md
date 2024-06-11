@@ -18,7 +18,8 @@
 ## Software info
 
 ### Required software:
-* Arduino IDE or VS Code (Platformio) (originally developed for Platformio)
+* Arduino IDE or VS Code (Platformio) (originally developed for/using Platformio)
+
 ### Required libraries:
 * SPI
 * Adafruit_PN532
@@ -33,6 +34,9 @@
 * PubSubClient
 * freertos/FreeRTOS
 * freertos/task
+
+### The code:
+You can find the code for the ESP32 under [`/src/main.cpp`](https://github.com/VaeluxV/ESP32-Smart-Planter-School-Project/blob/main/src/main.cpp)
 
 ---
 
@@ -57,7 +61,7 @@ Please note that the 12v & 5v connections are external connections coming from a
 The 5v relay module, 12v fan & 12v water pump are not shown in this schematic but have to be connected too. The fan is connected to relay channel 1, while the pump is connected on channel 2. All of these share a common ground with the esp32 (through the buck converter).
 
 ### Debugging connection
-Debugging can be done over serial (9600 baud) using the USB connection. Make sure to still plug in the PSU as otherwise there will not be enough power to run everything and the ESP32 will fail to boot properly!
+Debugging can be done over serial (9600 baud) using the USB connection. Make sure to still plug in the PSU as otherwise there will not be enough power to run everything and the ESP32 will possibly fail to boot properly!
 
 ---
 
